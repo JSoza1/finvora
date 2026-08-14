@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import { registrarVenta } from "@/app/empresa/webapp/stock/stock-actions";
+import { fetchAllFromTable } from "@/utils/supabase/pagination";
 
 export interface ComprobanteRecord {
   id: string;
@@ -450,9 +451,10 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
   const twoMonthsAgo = new Date();
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
 
-  const { data, error } = await supabase
-    .from('comprobantes')
-    .select(`
+  const rawComprobantes = await fetchAllFromTable<ComprobanteRawResponse>(
+    supabase,
+    'comprobantes',
+    `
       id,
       nombre_cliente,
       numero_telefono,
@@ -473,17 +475,14 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
       vendedor:perfiles!vendedor_id (id, username, role),
       repartidor:repartidores!repartidor_id (id, nombre),
       creador:perfiles!creado_por (id, username, role)
-    `)
-    .gte('created_at', twoMonthsAgo.toISOString())
-    .order('created_at', { ascending: false });
+    `,
+    {
+      filterFn: (q) => q.gte('created_at', twoMonthsAgo.toISOString()),
+      orderColumn: 'created_at',
+      ascending: false
+    }
+  );
 
-  if (error) {
-    console.error("Error al obtener comprobantes:", error);
-    return { success: false, error: `Error en la consulta: ${error.message}` };
-  }
-
-  // Mapeamos los datos de tipado para devolver un esquema seguro
-  const rawComprobantes = (data as any) as ComprobanteRawResponse[] | null;
   const formattedData: ComprobanteRecord[] = (rawComprobantes || []).map((comprobanteRaw: ComprobanteRawResponse) => ({
     id: comprobanteRaw.id,
     nombre_cliente: comprobanteRaw.nombre_cliente,

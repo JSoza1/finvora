@@ -4,6 +4,7 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
 import { getVendedores, getDistinctBrands } from "@/app/empresa/webapp/stock/stock-actions";
+import { fetchAllFromTable } from "@/utils/supabase/pagination";
 import StockClientView from "@/components/empresa/StockClientView";
 
 export const revalidate = 0;
@@ -42,9 +43,10 @@ export default async function StockPage() {
   // Definir estados disponibles según el rol (excluyendo 'Vendido' ya que las unidades vendidas se mueven al histórico)
   const estados = ["Disponible", "A consultar", "En envío"];
 
-  const query = supabase
-    .from("stock")
-    .select(`
+  const unidades = await fetchAllFromTable(
+    supabase,
+    "stock",
+    `
       imei,
       zona,
       estado,
@@ -57,16 +59,12 @@ export default async function StockPage() {
         almacenamiento,
         ram
       )
-    `)
-    .order('fecha_ingreso', { ascending: false });
-
-
-
-  const { data: unidades, error } = await query;
-
-  if (error) {
-    console.error("Error cargando inventario:", error);
-  }
+    `,
+    {
+      orderColumn: "fecha_ingreso",
+      ascending: false
+    }
+  );
 
   return (
     <div className={styles.container}>

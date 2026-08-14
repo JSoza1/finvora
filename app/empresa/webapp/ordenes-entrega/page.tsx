@@ -5,6 +5,8 @@ import AccessDenied from "@/components/empresa/AccessDenied";
 import OrdenesEntregaForm from "@/components/empresa/OrdenesEntregaForm";
 import { createClient } from "@/utils/supabase/server";
 
+import { fetchAllFromTable } from "@/utils/supabase/pagination";
+
 export const revalidate = 0;
 
 const styles = {
@@ -92,10 +94,16 @@ export default async function OrdenesEntregaPage() {
 
   // 6. Obtenemos repartos existentes desde la fecha actual para bloquear horarios ocupados
   const todayStr = new Date().toISOString().split("T")[0];
-  const { data: repartosExistentesRaw } = await supabase
-    .from("repartos")
-    .select("id, repartidor_id, fecha_reparto, horario")
-    .gte("fecha_reparto", todayStr);
+  const repartosExistentesRaw = await fetchAllFromTable<RepartoRow>(
+    supabase,
+    "repartos",
+    "id, repartidor_id, fecha_reparto, horario",
+    {
+      filterFn: (q) => q.gte("fecha_reparto", todayStr),
+      orderColumn: "fecha_reparto",
+      ascending: true
+    }
+  );
 
   interface RepartoRow {
     id: string;
@@ -104,7 +112,7 @@ export default async function OrdenesEntregaPage() {
     horario: string;
   }
 
-  const repartosExistentes = ((repartosExistentesRaw as unknown as RepartoRow[]) || []).map((r) => ({
+  const repartosExistentes = (repartosExistentesRaw || []).map((r) => ({
     id: r.id,
     repartidor_id: r.repartidor_id,
     fecha_reparto: r.fecha_reparto,

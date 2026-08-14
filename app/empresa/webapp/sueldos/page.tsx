@@ -2,6 +2,7 @@ import React from "react";
 import { getUserProfile } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
+import { fetchAllFromTable } from "@/utils/supabase/pagination";
 import CalculadoraSueldosClientPage from "@/components/empresa/CalculadoraSueldosClientPage";
 import type { ComprobanteRecord } from "@/app/empresa/webapp/comprobantes/comprobantes-actions";
 
@@ -23,6 +24,54 @@ interface PerfilRow {
 interface RepartidorRow {
   id: string;
   perfil_id: string;
+}
+
+interface StockVentaRow {
+  imei: string | null;
+  producto_id: string;
+}
+
+interface CatalogProductRow {
+  id: string;
+  marca: string;
+  modelo: string;
+  color: string;
+  almacenamiento: string;
+}
+
+interface CostoProveedorRow {
+  producto_id: string;
+  costo: number | string;
+  proveedor: string;
+}
+
+interface UserRelation {
+  id: string;
+  username: string | null;
+  role: string;
+}
+
+interface RepartidorRelation {
+  id: string;
+  nombre: string;
+  perfil_id: string;
+}
+
+interface RawComprobante {
+  id: string;
+  nombre_cliente: string;
+  comentarios: string | null;
+  precio_compra: number;
+  pago_inicial: number;
+  pago_recibido: number;
+  celular: string | null;
+  color_celular: string | null;
+  imei: string | null;
+  comprobante_url: string | null;
+  created_at: string;
+  vendedor: UserRelation | UserRelation[] | null;
+  repartidor: RepartidorRelation | RepartidorRelation[] | null;
+  creador: UserRelation | UserRelation[] | null;
 }
 
 export default async function SueldosPage() {
@@ -74,15 +123,16 @@ export default async function SueldosPage() {
   twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
 
   const [
-    comprobantesResult,
-    stockResult,
-    ventasResult,
-    catalogResult,
-    costosResult,
+    comprobantesRaw,
+    stockItems,
+    ventasItems,
+    { data: catalogResult },
+    { data: costosResult },
   ] = await Promise.all([
-    supabase
-      .from("comprobantes")
-      .select(`
+    fetchAllFromTable<RawComprobante>(
+      supabase,
+      "comprobantes",
+      `
         id,
         nombre_cliente,
         comentarios,
@@ -97,71 +147,21 @@ export default async function SueldosPage() {
         vendedor:perfiles!vendedor_id (id, username, role),
         repartidor:repartidores!repartidor_id (id, nombre, perfil_id),
         creador:perfiles!creado_por (id, username, role)
-      `)
-      .gte("created_at", twoMonthsAgo.toISOString())
-      .order("created_at", { ascending: false }),
-    supabase.from("stock").select("imei, producto_id"),
-    supabase.from("ventas").select("imei, producto_id"),
+      `,
+      {
+        filterFn: (q) => q.gte("created_at", twoMonthsAgo.toISOString()),
+        orderColumn: "created_at",
+        ascending: false,
+      }
+    ),
+    fetchAllFromTable<StockVentaRow>(supabase, "stock", "imei, producto_id"),
+    fetchAllFromTable<StockVentaRow>(supabase, "ventas", "imei, producto_id"),
     supabase.from("productos").select("id, marca, modelo, color, almacenamiento"),
     supabase.from("producto_costos_proveedores").select("producto_id, costo, proveedor"),
   ]);
 
-  if (comprobantesResult.error) {
-    console.error("Error al obtener comprobantes para calculadora:", comprobantesResult.error);
-  }
-
-  interface StockVentaRow {
-    imei: string | null;
-    producto_id: string;
-  }
-
-  interface CatalogProductRow {
-    id: string;
-    marca: string;
-    modelo: string;
-    color: string;
-    almacenamiento: string;
-  }
-
-  interface CostoProveedorRow {
-    producto_id: string;
-    costo: number | string;
-    proveedor: string;
-  }
-
-  interface UserRelation {
-    id: string;
-    username: string | null;
-    role: string;
-  }
-
-  interface RepartidorRelation {
-    id: string;
-    nombre: string;
-    perfil_id: string;
-  }
-
-  interface RawComprobante {
-    id: string;
-    nombre_cliente: string;
-    comentarios: string | null;
-    precio_compra: number;
-    pago_inicial: number;
-    pago_recibido: number;
-    celular: string | null;
-    color_celular: string | null;
-    imei: string | null;
-    comprobante_url: string | null;
-    created_at: string;
-    vendedor: UserRelation | UserRelation[] | null;
-    repartidor: RepartidorRelation | RepartidorRelation[] | null;
-    creador: UserRelation | UserRelation[] | null;
-  }
-
-  const stockItems = (stockResult.data || []) as StockVentaRow[];
-  const ventasItems = (ventasResult.data || []) as StockVentaRow[];
-  const catalogProducts = (catalogResult.data || []) as CatalogProductRow[];
-  const costosProveedores = (costosResult.data || []) as CostoProveedorRow[];
+  const catalogProducts = (catalogResult || []) as CatalogProductRow[];
+  const costosProveedores = (costosResult || []) as CostoProveedorRow[];
 
   // Mapeo IMEI ➔ producto_id
   const imeiToProductMap = new Map<string, string>();
@@ -186,7 +186,7 @@ export default async function SueldosPage() {
     return {
       id: singleUser.id,
       username: singleUser.username || "Usuario sin nombre",
-      role: singleUser.role
+      role: singleUser.role,
     };
   };
 
@@ -197,26 +197,28 @@ export default async function SueldosPage() {
     return {
       id: singleRep.id,
       nombre: singleRep.nombre || "Sin nombre",
-      perfil_id: singleRep.perfil_id
+      perfil_id: singleRep.perfil_id,
     };
   };
 
-  const rawComprobantes = (comprobantesResult.data || []) as unknown as RawComprobante[];
-  const comprobantesList: ComprobanteRecord[] = rawComprobantes.map((comprobanteRaw) => {
+  const comprobantesList: ComprobanteRecord[] = comprobantesRaw.map((comprobanteRaw) => {
     const imeiTrimmed = comprobanteRaw.imei ? comprobanteRaw.imei.trim() : "";
     let matchedProductId = imeiTrimmed ? imeiToProductMap.get(imeiTrimmed) : undefined;
 
     // Fallback: Si no hay cruce de IMEI, intentamos por modelo (celular) y color
     if (!matchedProductId && comprobanteRaw.celular) {
       const celLower = comprobanteRaw.celular.toLowerCase().replace(/\s+/g, "");
-      const colorLower = comprobanteRaw.color_celular ? comprobanteRaw.color_celular.toLowerCase().replace(/\s+/g, "") : "";
-      
+      const colorLower = comprobanteRaw.color_celular
+        ? comprobanteRaw.color_celular.toLowerCase().replace(/\s+/g, "")
+        : "";
+
       const foundProduct = catalogProducts.find((product) => {
         const prodModelLower = product.modelo.toLowerCase().replace(/\s+/g, "");
         const prodColorLower = product.color.toLowerCase().replace(/\s+/g, "");
-        // Si el modelo del catálogo está incluido en el texto libre de celular, o viceversa, y coinciden colores
-        return (celLower.includes(prodModelLower) || prodModelLower.includes(celLower)) && 
-               (!colorLower || prodColorLower === colorLower);
+        return (
+          (celLower.includes(prodModelLower) || prodModelLower.includes(celLower)) &&
+          (!colorLower || prodColorLower === colorLower)
+        );
       });
 
       if (foundProduct) {
