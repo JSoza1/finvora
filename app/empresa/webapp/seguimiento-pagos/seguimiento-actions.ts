@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { fetchAllFromTable } from "@/utils/supabase/pagination";
 
 export type EstadoCuota = 'En revisión' | 'Pagado' | 'Por vencer' | 'Vencido';
 
@@ -86,9 +87,10 @@ export async function getSeguimientoPagos(): Promise<{
 
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-      .from('seguimiento_pagos')
-      .select(`
+    const data = await fetchAllFromTable<SeguimientoRawResponse>(
+      supabase,
+      'seguimiento_pagos',
+      `
         id,
         comprobante_origen_id,
         tag,
@@ -108,15 +110,11 @@ export async function getSeguimientoPagos(): Promise<{
         vendedor:vendedor_id ( id, username ),
         repartidor:repartidor_id ( id, nombre ),
         comprobante:comprobante_origen_id ( tag )
-      `)
-      .order('created_at', { ascending: false });
+      `,
+      { orderColumn: 'created_at', ascending: false }
+    );
 
-    if (error) {
-      console.error("Error al obtener seguimiento de pagos:", error);
-      return { success: false, error: error.message };
-    }
-
-    const formattedData: SeguimientoPagoRecord[] = ((data as unknown) as SeguimientoRawResponse[] || []).map(row => {
+    const formattedData: SeguimientoPagoRecord[] = (data || []).map(row => {
       const vendedorObj = Array.isArray(row.vendedor) ? row.vendedor[0] : row.vendedor;
       const repartidorObj = Array.isArray(row.repartidor) ? row.repartidor[0] : row.repartidor;
       const comprobanteObj = Array.isArray(row.comprobante) ? row.comprobante[0] : row.comprobante;

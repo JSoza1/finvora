@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import { getDriverRestDayInfo } from "@/utils/driver-schedule";
-
+import { fetchAllFromTable } from "@/utils/supabase/pagination";
 
 /**
  * Obtiene todos los repartos programados para un mes y año específicos.
@@ -27,9 +27,10 @@ export async function getRepartosMes(year: number, month: number) {
   const startDate = new Date(year, month, 1).toISOString().split('T')[0];
   const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
 
-  const { data, error } = await supabase
-    .from('repartos')
-    .select(`
+  const data = await fetchAllFromTable(
+    supabase,
+    'repartos',
+    `
       id,
       fecha_reparto,
       horario,
@@ -58,16 +59,15 @@ export async function getRepartosMes(year: number, month: number) {
         almacenamiento,
         ram
       )
-    `)
-    .gte('fecha_reparto', startDate)
-    .lte('fecha_reparto', endDate);
+    `,
+    {
+      filterFn: (q) => q.gte('fecha_reparto', startDate).lte('fecha_reparto', endDate),
+      orderColumn: 'fecha_reparto',
+      ascending: true
+    }
+  );
 
-  if (error) {
-    console.error("Error al obtener repartos:", error);
-    return { success: false, error: error.message };
-  }
-
-  return { success: true, data };
+  return { success: true, data: data || [] };
 }
 
 
@@ -122,9 +122,10 @@ export async function getLogisticsFormData() {
   }
 
   // 4. Obtener stock disponible o a consultar (ocultar 'A consultar' para el rol Closer)
-  const stockQuery = supabase
-    .from('stock')
-    .select(`
+  const stock = await fetchAllFromTable(
+    supabase,
+    'stock',
+    `
       imei,
       producto_id,
       zona,
@@ -135,21 +136,13 @@ export async function getLogisticsFormData() {
         almacenamiento,
         ram
       )
-    `)
-    .order('fecha_ingreso', { ascending: false });
-
-  if (role === "Repartidor") {
-    stockQuery.eq('estado', 'Disponible');
-  } else {
-    stockQuery.in('estado', ['Disponible', 'A consultar']);
-  }
-
-  const { data: stock, error: stockError } = await stockQuery;
-
-  if (stockError) {
-    console.error("Error al obtener stock:", stockError);
-    return { success: false, error: stockError.message };
-  }
+    `,
+    {
+      filterFn: (q) => (role === "Repartidor" ? q.eq('estado', 'Disponible') : q.in('estado', ['Disponible', 'A consultar'])),
+      orderColumn: 'fecha_ingreso',
+      ascending: false
+    }
+  );
 
   return {
     success: true,
