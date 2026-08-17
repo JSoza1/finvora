@@ -96,6 +96,7 @@ export function SeguimientoFilters({
               <option value="Por vencer" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>POR VENCER</option>
               <option value="Vencido" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>VENCIDO</option>
               <option value="Pagado" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>PAGADO</option>
+              <option value="No Verificable" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>NO VERIFICABLE</option>
             </select>
           </div>
         </div>
@@ -103,7 +104,7 @@ export function SeguimientoFilters({
 
       {/* Separador e Filtros Secundarios */}
       <div className="border-t border-slate-800/60 pt-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative pb-1 sm:pb-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="material-symbols-outlined text-slate-400 text-base">calendar_month</span>
@@ -161,12 +162,12 @@ export function SeguimientoFilters({
             <button
               type="button"
               onClick={handleClearFilters}
-              className="flex items-center justify-center gap-1.5 h-10 px-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs md:text-sm font-bold transition-all cursor-pointer shadow-sm shadow-red-500/5 absolute right-0 bottom-0 sm:relative sm:right-auto sm:bottom-auto sm:ml-auto shrink-0"
+              className="flex items-center justify-center gap-1.5 h-10 px-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs md:text-sm font-bold transition-all cursor-pointer shadow-sm shadow-red-500/5 w-full sm:w-auto sm:ml-auto shrink-0"
               title="Limpiar Filtros"
               suppressHydrationWarning
             >
               <span className="material-symbols-outlined text-base md:text-lg">filter_alt_off</span>
-              <span className="hidden sm:inline">Limpiar Filtros</span>
+              <span>Limpiar Filtros</span>
             </button>
           )}
         </div>

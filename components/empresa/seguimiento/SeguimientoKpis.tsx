@@ -5,6 +5,7 @@ import React from 'react';
 interface SeguimientoKpisProps {
   stats: {
     totalClientes: number;
+    noVerificablesCount: number;
     alDiaCount: number;
     porVencerCount: number;
     vencidosCount: number;
@@ -15,11 +16,19 @@ interface SeguimientoKpisProps {
 export function SeguimientoKpis({ stats }: SeguimientoKpisProps) {
   return (
     <div className="space-y-2.5">
-      {/* Total Clientes */}
-      <div className="flex items-center gap-2 md:gap-2.5 text-xs md:text-sm font-semibold text-slate-400 px-1">
-        <span className="material-symbols-outlined text-base md:text-lg text-secondary select-none">group</span>
-        <span>Total clientes:</span>
-        <span className="text-white font-extrabold font-mono text-sm md:text-base">{stats.totalClientes}</span>
+      {/* Total Clientes y No Verificables */}
+      <div className="flex items-center gap-4 md:gap-6 flex-wrap px-1">
+        <div className="flex items-center gap-2 md:gap-2.5 text-xs md:text-sm font-semibold text-slate-400">
+          <span className="material-symbols-outlined text-base md:text-lg text-secondary select-none">group</span>
+          <span>Total clientes:</span>
+          <span className="text-white font-extrabold font-mono text-sm md:text-base">{stats.totalClientes}</span>
+        </div>
+
+        <div className="flex items-center gap-2 md:gap-2.5 text-xs md:text-sm font-semibold text-slate-400">
+          <span className="material-symbols-outlined text-base md:text-lg text-purple-400 select-none">group</span>
+          <span>No verificables:</span>
+          <span className="text-purple-400 font-extrabold font-mono text-sm md:text-base">{stats.noVerificablesCount}</span>
+        </div>
       </div>
 
       {/* 4 Tarjetas KPI de Estado */}

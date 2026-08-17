@@ -111,6 +111,7 @@ export default function SeguimientoPagosClientPage({
     let porVencerCount = 0;
     let vencidosCount = 0;
     let enRevisionCount = 0;
+    let noVerificablesCount = 0;
 
     filteredData.forEach((item) => {
       const totalSemanas = item.plazos || 0;
@@ -122,10 +123,12 @@ export default function SeguimientoPagosClientPage({
       else if (estadoActual === 'Por vencer') porVencerCount++;
       else if (estadoActual === 'Vencido') vencidosCount++;
       else if (estadoActual === 'En revisión') enRevisionCount++;
+      else if (estadoActual === 'No Verificable') noVerificablesCount++;
     });
 
     return {
       totalClientes: filteredData.length,
+      noVerificablesCount,
       alDiaCount,
       porVencerCount,
       vencidosCount,
@@ -165,12 +168,22 @@ export default function SeguimientoPagosClientPage({
     if (result.success) {
       setRegistrosSeguimiento(prev => prev.map(row => {
         if (row.id === item.id) {
+          let nuevosEstados: Record<string, EstadoCuota> = { ...(row.estados_semanales || {}) };
+          if (nuevoEstado === 'No Verificable') {
+            const plazosCount = Math.max(row.plazos || 0, Object.keys(nuevosEstados).length, 1);
+            for (let i = 1; i <= plazosCount; i++) {
+              nuevosEstados[`semana_${i}`] = 'No Verificable';
+            }
+            Object.keys(nuevosEstados).forEach(k => {
+              nuevosEstados[k] = 'No Verificable';
+            });
+          } else {
+            nuevosEstados[semanaKey] = nuevoEstado;
+          }
+
           return {
             ...row,
-            estados_semanales: {
-              ...(row.estados_semanales || {}),
-              [semanaKey]: nuevoEstado
-            }
+            estados_semanales: nuevosEstados
           };
         }
         return row;
@@ -243,12 +256,22 @@ export default function SeguimientoPagosClientPage({
 
           setRegistrosSeguimiento((prev: SeguimientoPagoRecord[]) => prev.map((row: SeguimientoPagoRecord) => {
             if (row.id === selectedForDetail.id) {
+              let nuevosEstados: Record<string, EstadoCuota> = { ...(row.estados_semanales || {}) };
+              if (nuevoEstado === 'No Verificable') {
+                const plazosCount = Math.max(row.plazos || 0, Object.keys(nuevosEstados).length, 1);
+                for (let i = 1; i <= plazosCount; i++) {
+                  nuevosEstados[`semana_${i}`] = 'No Verificable';
+                }
+                Object.keys(nuevosEstados).forEach(k => {
+                  nuevosEstados[k] = 'No Verificable';
+                });
+              } else {
+                nuevosEstados[semanaKey] = nuevoEstado;
+              }
+
               const updated = {
                 ...row,
-                estados_semanales: {
-                  ...(row.estados_semanales || {}),
-                  [semanaKey]: nuevoEstado
-                }
+                estados_semanales: nuevosEstados
               };
               setSelectedForDetail(updated);
               return updated;

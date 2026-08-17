@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import { fetchAllFromTable } from "@/utils/supabase/pagination";
 
-export type EstadoCuota = 'En revisión' | 'Pagado' | 'Por vencer' | 'Vencido';
+export type EstadoCuota = 'En revisión' | 'Pagado' | 'Por vencer' | 'Vencido' | 'No Verificable';
 
 export interface SeguimientoPagoRecord {
   id: string;
@@ -150,6 +150,7 @@ export async function getSeguimientoPagos(): Promise<{
 
 /**
  * Actualiza el estado de una semana específica en el JSONB de estados_semanales.
+ * Si el nuevo estado es 'No Verificable', se propaga automáticamente a todas las semanas.
  */
 export async function updateEstadoSemana(
   id: string,
@@ -167,7 +168,7 @@ export async function updateEstadoSemana(
     // 1. Obtener registro actual
     const { data: record, error: fetchErr } = await supabase
       .from('seguimiento_pagos')
-      .select('estados_semanales')
+      .select('estados_semanales, plazos')
       .eq('id', id)
       .single();
 
@@ -176,10 +177,19 @@ export async function updateEstadoSemana(
     }
 
     const estadosActuales = record.estados_semanales || {};
-    const nuevosEstados = {
-      ...estadosActuales,
-      [semanaKey]: nuevoEstado,
-    };
+    let nuevosEstados: Record<string, EstadoCuota> = { ...estadosActuales };
+
+    if (nuevoEstado === 'No Verificable') {
+      const plazosCount = Math.max(Number(record.plazos) || 0, Object.keys(estadosActuales).length, 1);
+      for (let i = 1; i <= plazosCount; i++) {
+        nuevosEstados[`semana_${i}`] = 'No Verificable';
+      }
+      Object.keys(estadosActuales).forEach(k => {
+        nuevosEstados[k] = 'No Verificable';
+      });
+    } else {
+      nuevosEstados[semanaKey] = nuevoEstado;
+    }
 
     const { error: updateErr } = await supabase
       .from('seguimiento_pagos')
@@ -201,11 +211,12 @@ export async function updateEstadoSemana(
 }
 
 /**
- * Actualiza los datos de un registro de seguimiento (útil para completar fecha_proximo_pago o plazos faltantes).
+ * Actualiza los datos de un registro de seguimiento (útil para completar fecha_proximo_pago, plazos, tag, etc.).
  */
 export async function updateSeguimientoPago(
   id: string,
   datos: {
+    tag?: string | null;
     nombre_cliente?: string;
     numero_telefono?: string;
     celular?: string;
