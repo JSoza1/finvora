@@ -22,6 +22,7 @@ export function EditSeguimientoModal({
 }: EditSeguimientoModalProps) {
   const [nombreCliente, setNombreCliente] = useState('');
   const [numeroTelefono, setNumeroTelefono] = useState('');
+  const [tag, setTag] = useState('');
   const [celular, setCelular] = useState('');
   const [imei, setImei] = useState('');
   const [precioTotal, setPrecioTotal] = useState<number | ''>('');
@@ -36,6 +37,7 @@ export function EditSeguimientoModal({
     if (registro) {
       setNombreCliente(registro.nombre_cliente || '');
       setNumeroTelefono(registro.numero_telefono || '');
+      setTag(registro.tag || '');
       setCelular(registro.celular || '');
       setImei(registro.imei || '');
       setPrecioTotal(registro.precio_total || '');
@@ -61,6 +63,7 @@ export function EditSeguimientoModal({
     setIsSubmitting(true);
 
     const result = await updateSeguimientoPago(registro.id, {
+      tag: tag.trim() || undefined,
       nombre_cliente: nombreCliente.trim(),
       numero_telefono: numeroTelefono.trim() || undefined,
       celular: celular.trim() || undefined,
@@ -109,15 +112,27 @@ export function EditSeguimientoModal({
             </div>
           )}
 
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-300">Número de Teléfono</label>
-            <input
-              type="tel"
-              value={numeroTelefono}
-              onChange={(e) => setNumeroTelefono(e.target.value)}
-              placeholder="Ej: 5212345678900"
-              className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-base sm:text-sm text-slate-100 focus:border-indigo-500 outline-none transition-colors font-[family-name:var(--font-outfit)]"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-300">Número de Teléfono</label>
+              <input
+                type="tel"
+                value={numeroTelefono}
+                onChange={(e) => setNumeroTelefono(e.target.value)}
+                placeholder="Ej: 5212345678900"
+                className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-base sm:text-sm text-slate-100 focus:border-indigo-500 outline-none transition-colors font-[family-name:var(--font-outfit)]"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-300">Tag</label>
+              <input
+                type="text"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                placeholder="Ej: T-1234"
+                className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-base sm:text-sm text-slate-100 focus:border-indigo-500 outline-none transition-colors font-[family-name:var(--font-outfit)]"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

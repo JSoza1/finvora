@@ -72,7 +72,7 @@ export function SeguimientoTable({
             <tr>
               <th className="px-8 py-4 text-left w-[58%]">Cliente</th>
               <th className="px-4 py-4 text-center">Vendedor</th>
-              <th className="px-4 py-4 text-center">Tag</th>
+              <th className="px-4 py-4 text-center">TAG / IMEI</th>
               <th className="w-[12%]"></th>
               <th className="px-4 py-4 text-center">Próximo Pago</th>
               <th className="w-[12%]"></th>
@@ -139,24 +139,31 @@ export function SeguimientoTable({
                       {item.vendedor?.username || <span className="text-xs text-slate-500">—</span>}
                     </td>
 
-                    {/* Tag */}
+                    {/* Tag / IMEI */}
                     <td className="px-4 py-4 whitespace-nowrap text-center">
-                      <div className="relative flex items-center justify-center">
-                        {copiedTagId === item.id && (
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-emerald-400 border border-slate-700 text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-                            ¡Copiado!
-                          </div>
-                        )}
-                        {item.tag ? (
-                          <button
-                            type="button"
-                            onClick={() => handleCopyTag(item.id, item.tag!)}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-950 text-slate-300 border border-slate-800 cursor-pointer"
-                          >
-                            {item.tag}
-                          </button>
-                        ) : (
-                          <span className="text-xs text-slate-500">—</span>
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="relative flex items-center justify-center">
+                          {copiedTagId === item.id && (
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-emerald-400 border border-slate-700 text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                              ¡Copiado!
+                            </div>
+                          )}
+                          {item.tag ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyTag(item.id, item.tag!)}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-950 text-slate-300 border border-slate-800 cursor-pointer"
+                            >
+                              {item.tag}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-500">—</span>
+                          )}
+                        </div>
+                        {item.imei && (
+                          <span className="font-mono bg-slate-950 px-2 sm:px-2.5 py-0.5 sm:py-1 mt-1 sm:mt-1.5 rounded-md border border-slate-800 text-secondary text-[10px] sm:text-xs font-bold inline-block">
+                            {item.imei}
+                          </span>
                         )}
                       </div>
                     </td>
