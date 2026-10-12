@@ -47,15 +47,16 @@ export default function ComprobantesHistorial({
   // Filtrado en memoria por buscador global, rango de fechas, vendedor y repartidor/ubicación
   const filteredList = useMemo(() => {
     return comprobantes.filter((comprobante) => {
-      // 1. Buscador global (Cliente, IMEI, TAG, Vendedor)
+      // 1. Buscador global (Cliente, IMEI, TAG, Vendedor, Repartidor)
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase().trim();
         const matchCliente = comprobante.nombre_cliente?.toLowerCase().includes(query);
         const matchImei = comprobante.imei?.toLowerCase().includes(query);
         const matchTag = comprobante.tag?.toLowerCase().includes(query);
-        const matchVendedor = comprobante.vendedor?.username?.toLowerCase().includes(query);
+        const matchVendedor = (comprobante.vendedor?.username || comprobante.vendedor_nombre)?.toLowerCase().includes(query);
+        const matchRepartidor = (comprobante.repartidor?.nombre || comprobante.repartidor_nombre)?.toLowerCase().includes(query);
 
-        if (!matchCliente && !matchImei && !matchTag && !matchVendedor) return false;
+        if (!matchCliente && !matchImei && !matchTag && !matchVendedor && !matchRepartidor) return false;
       }
 
       // 2. Filtro de fecha
@@ -69,14 +70,24 @@ export default function ComprobantesHistorial({
       if (filters.dateFrom && tijuanaDateStr < filters.dateFrom) return false;
       if (filters.dateTo && tijuanaDateStr > filters.dateTo) return false;
 
-      // 3. Filtro de vendedor (soporta selección múltiple)
+      // 3. Filtro de vendedor (soporta selección múltiple y vendedores históricos)
       if (filters.filterVendedores.length > 0) {
-        if (!comprobante.vendedor || !filters.filterVendedores.includes(comprobante.vendedor.id)) return false;
+        const matchesActive = comprobante.vendedor && filters.filterVendedores.includes(comprobante.vendedor.id);
+        const matchesHistorical = comprobante.vendedor_nombre && (
+          filters.filterVendedores.includes(`hist_${comprobante.vendedor_nombre.toLowerCase()}`) ||
+          filters.filterVendedores.includes(comprobante.vendedor_nombre)
+        );
+        if (!matchesActive && !matchesHistorical) return false;
       }
 
-      // 4. Filtro de repartidor/ubicación (soporta selección múltiple)
+      // 4. Filtro de repartidor/ubicación (soporta selección múltiple y repartidores históricos)
       if (filters.filterRepartidores.length > 0) {
-        if (!comprobante.repartidor || !filters.filterRepartidores.includes(comprobante.repartidor.id)) return false;
+        const matchesActive = comprobante.repartidor && filters.filterRepartidores.includes(comprobante.repartidor.id);
+        const matchesHistorical = comprobante.repartidor_nombre && (
+          filters.filterRepartidores.includes(`hist_${comprobante.repartidor_nombre.toLowerCase()}`) ||
+          filters.filterRepartidores.includes(comprobante.repartidor_nombre)
+        );
+        if (!matchesActive && !matchesHistorical) return false;
       }
 
       return true;
@@ -112,7 +123,7 @@ export default function ComprobantesHistorial({
       const fotoPagoAdelantadoUrl = comprobante.foto_pago_adelantado_url;
       setDownloadProgress(`Descargando ${index + 1} de ${filteredList.length}...`);
 
-      const vendorName = comprobante.vendedor?.username || 'vendedor';
+      const vendorName = comprobante.vendedor?.username || comprobante.vendedor_nombre || 'vendedor';
       const formattedDate = new Intl.DateTimeFormat('es-MX', {
         timeZone: 'America/Tijuana',
         year: 'numeric',
@@ -275,6 +286,11 @@ export default function ComprobantesHistorial({
                         <span className="text-slate-100 font-bold">{comprobante.vendedor.username.charAt(0).toUpperCase() + comprobante.vendedor.username.slice(1)}</span>
                         <span className="text-[10px] text-slate-500">{comprobante.vendedor.role}</span>
                       </div>
+                    ) : comprobante.vendedor_nombre ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-slate-100 font-bold">{comprobante.vendedor_nombre.charAt(0).toUpperCase() + comprobante.vendedor_nombre.slice(1)}</span>
+                        <span className="text-[10px] text-slate-500">Ex-Empleado</span>
+                      </div>
                     ) : (
                       <span className="text-slate-500">Desconocido</span>
                     )}
@@ -283,6 +299,10 @@ export default function ComprobantesHistorial({
                     {comprobante.repartidor ? (
                       <div className="flex flex-col items-center">
                         <span className="text-slate-100 font-bold">{comprobante.repartidor.nombre}</span>
+                      </div>
+                    ) : comprobante.repartidor_nombre ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-slate-100 font-bold">{comprobante.repartidor_nombre}</span>
                       </div>
                     ) : (
                       <span className="text-slate-500">Desconocido</span>

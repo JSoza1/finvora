@@ -97,19 +97,6 @@ export default async function ComprobantesPage() {
     }
   });
 
-  const vendedores = ((vendedoresRaw as unknown as PerfilRawItem[]) || []).map((vendedorPerfil) => ({
-    id: vendedorPerfil.id,
-    display: `${vendedorPerfil.role || "Sin rol"}: ${vendedorPerfil.username ? capitalize(vendedorPerfil.username) : "Sin nombre"}`
-  }));
-
-  const repartidores = Array.from(uniqueRepartidoresMap.entries())
-    .map(([repId, nombre]) => ({
-      id: repId, // Usamos directamente el ID original de la tabla repartidores
-      repartidorId: repId,
-      display: nombre
-    }))
-    .sort((repartidorA, repartidorB) => repartidorA.display.localeCompare(repartidorB.display));
-
   // 4. Obtener registros históricos si corresponde a roles superiores
   const showTable = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
   let comprobantesList: ComprobanteRecord[] = [];
@@ -120,6 +107,48 @@ export default async function ComprobantesPage() {
       comprobantesList = comprobantesResponse.data;
     }
   }
+
+  const vendedoresMap = new Map<string, { id: string; display: string }>();
+
+  ((vendedoresRaw as unknown as PerfilRawItem[]) || []).forEach((vendedorPerfil) => {
+    vendedoresMap.set(vendedorPerfil.id, {
+      id: vendedorPerfil.id,
+      display: `${vendedorPerfil.role || "Sin rol"}: ${vendedorPerfil.username ? capitalize(vendedorPerfil.username) : "Sin nombre"}`
+    });
+  });
+
+  // Agregar vendedores históricos que ya no tienen cuenta activa en perfiles
+  comprobantesList.forEach((c) => {
+    if (!c.vendedor && c.vendedor_nombre) {
+      const key = `hist_${c.vendedor_nombre.toLowerCase()}`;
+      if (!vendedoresMap.has(key)) {
+        vendedoresMap.set(key, {
+          id: key,
+          display: `Ex-Empleado: ${capitalize(c.vendedor_nombre)}`
+        });
+      }
+    }
+  });
+
+  const vendedores = Array.from(vendedoresMap.values());
+
+  // Agregar repartidores históricos que ya no están activos
+  comprobantesList.forEach((c) => {
+    if (!c.repartidor && c.repartidor_nombre) {
+      const key = `hist_${c.repartidor_nombre.toLowerCase()}`;
+      if (!uniqueRepartidoresMap.has(key)) {
+        uniqueRepartidoresMap.set(key, c.repartidor_nombre);
+      }
+    }
+  });
+
+  const repartidores = Array.from(uniqueRepartidoresMap.entries())
+    .map(([repId, nombre]) => ({
+      id: repId, // Usamos directamente el ID original o clave histórica
+      repartidorId: repId,
+      display: nombre
+    }))
+    .sort((repartidorA, repartidorB) => repartidorA.display.localeCompare(repartidorB.display));
 
   return (
     <div className={styles.container}>

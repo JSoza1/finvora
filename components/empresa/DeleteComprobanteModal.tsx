@@ -57,8 +57,8 @@ export default function DeleteComprobanteModal({
             Precio Compra: <strong className="text-slate-300">{formatCurrency(comprobante.precio_compra)}</strong> |
             Pago Inicial: <strong className="text-slate-300">{formatCurrency(comprobante.pago_inicial)}</strong> |
             Pago Recibido: <strong className="text-secondary">{formatCurrency(comprobante.pago_recibido)}</strong><br />
-            Vendedor: <strong className="text-white">{comprobante.vendedor?.username || "Desconocido"}</strong><br />
-            Repartidor/Ubicación: <strong className="text-white">{comprobante.repartidor?.nombre || "Desconocido"}</strong><br />
+            Vendedor: <strong className="text-white">{comprobante.vendedor?.username || comprobante.vendedor_nombre || "Desconocido"}</strong><br />
+            Repartidor/Ubicación: <strong className="text-white">{comprobante.repartidor?.nombre || comprobante.repartidor_nombre || "Desconocido"}</strong><br />
             {comprobante.celular && <>Equipo: <strong className="text-white">{comprobante.celular}</strong> {comprobante.color_celular && <span className="text-slate-500">({comprobante.color_celular})</span>}<br /></>}
             {comprobante.imei && <>IMEI: <strong className="text-secondary">{comprobante.imei}</strong><br /></>}
             Esta acción es irreversible, eliminará el registro de la base de datos y el archivo correspondiente de storage.

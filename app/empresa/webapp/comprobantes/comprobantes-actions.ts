@@ -31,6 +31,8 @@ export interface ComprobanteRecord {
   foto_pago_adelantado_url?: string | null;
   created_at: string;
   costo_equipo?: number;
+  vendedor_nombre?: string | null;
+  repartidor_nombre?: string | null;
   vendedor: {
     id: string;
     username: string;
@@ -79,6 +81,8 @@ interface ComprobanteRawResponse {
   pago_adelantado?: string | null;
   foto_pago_adelantado_url?: string | null;
   created_at: string;
+  vendedor_nombre?: string | null;
+  repartidor_nombre?: string | null;
   vendedor: PerfilSubQuery | PerfilSubQuery[] | null;
   repartidor: RepartidorSubQuery | RepartidorSubQuery[] | null;
   creador: PerfilSubQuery | PerfilSubQuery[] | null;
@@ -603,6 +607,8 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
       pago_adelantado,
       foto_pago_adelantado_url,
       created_at,
+      vendedor_nombre,
+      repartidor_nombre,
       vendedor:perfiles!vendedor_id (id, username, role),
       repartidor:repartidores!repartidor_id (id, nombre),
       creador:perfiles!creado_por (id, username, role)
@@ -635,6 +641,8 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     pago_adelantado: comprobanteRaw.pago_adelantado || "No",
     foto_pago_adelantado_url: comprobanteRaw.foto_pago_adelantado_url || null,
     created_at: comprobanteRaw.created_at,
+    vendedor_nombre: comprobanteRaw.vendedor_nombre || null,
+    repartidor_nombre: comprobanteRaw.repartidor_nombre || null,
     vendedor: Array.isArray(comprobanteRaw.vendedor) ? comprobanteRaw.vendedor[0] : (comprobanteRaw.vendedor as PerfilSubQuery | null),
     repartidor: Array.isArray(comprobanteRaw.repartidor) ? comprobanteRaw.repartidor[0] : (comprobanteRaw.repartidor as RepartidorSubQuery | null),
     creador: Array.isArray(comprobanteRaw.creador) ? comprobanteRaw.creador[0] : (comprobanteRaw.creador as PerfilSubQuery | null),
