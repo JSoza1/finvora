@@ -4,7 +4,7 @@ import React from "react";
 import * as XLSX from "xlsx";
 import { calculateSaldoRestante, calculateSemanasTranscurridas, formatFechaDDMMYYYY, addWeeksToDate } from "@/utils/date-tijuana";
 
-type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias' | 'ordenes_garantia' | 'seguimiento_pagos';
+type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias' | 'ordenes_garantia' | 'seguimiento_pagos' | 'blacklist';
 
 interface RepartidorOption {
   id: string;
@@ -241,6 +241,18 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
         };
       });
     }
+    else if (type === 'blacklist') {
+      fileNamePrefix = "Blacklist";
+      sheetName = "Lista Negra";
+      worksheetData = data.map(item => ({
+        "Nombre": item.nombre || "N/A",
+        "CURP": item.curp || "N/A",
+        "Zona": item.zona || "N/A",
+        "Motivo": item.motivo || "N/A",
+        "Fecha de Registro": item.created_at ? new Date(item.created_at).toLocaleDateString('es-MX') : "N/A",
+        "Registrado Por": item.registrado_por_nombre || "Autorizado"
+      }));
+    }
 
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
@@ -257,7 +269,8 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
     ordenes_entrega: "Descargar Órdenes de Entrega en Excel",
     garantias: "Descargar Historial de Garantías en Excel",
     ordenes_garantia: "Descargar Órdenes de Garantía en Excel",
-    seguimiento_pagos: "Descargar Seguimiento de Pagos en Excel"
+    seguimiento_pagos: "Descargar Seguimiento de Pagos en Excel",
+    blacklist: "Descargar Black List en Excel"
   };
 
   const isDisabled = !data || data.length === 0;

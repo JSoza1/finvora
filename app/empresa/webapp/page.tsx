@@ -217,6 +217,19 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
+      {/* Black List */}
+      <Link href="/empresa/webapp/blacklist" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>person_off</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Black List</h2>
+          <p className={styles.cardDesc}>Expediente de clientes bloqueados por fraude o morosidad.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
       {/* Próximamente */}
       <div className={styles.cardUpcoming}>
         <div className={styles.cardGlow} />

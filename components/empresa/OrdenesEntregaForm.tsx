@@ -9,7 +9,11 @@ import { FormSeleccionEquipo } from "./ordenes-entrega/FormSeleccionEquipo";
 import { FormProgramacionEntrega } from "./ordenes-entrega/FormProgramacionEntrega";
 
 // 3. Acciones y Utilidades
-import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
+import { submitOrdenEntrega, checkCurpInBlacklist } from "@/app/empresa/webapp/ordenes-entrega/actions";
+import {
+  BlacklistOrderBlockedModal,
+  type BlacklistBlockedRecord,
+} from "./ordenes-entrega/BlacklistOrderBlockedModal";
 import { getDriverRestDayInfo, getDriverScheduleConfig } from "@/utils/driver-schedule";
 import { getPlazaCostoPrincipal } from "@/config/cotizaciones";
 
@@ -152,6 +156,11 @@ export default function OrdenesEntregaForm({
   const [clienteHistorial, setClienteHistorial] = useState("");
   const [engancheValue, setEngancheValue] = useState("");
   const [pagoAdelantado, setPagoAdelantado] = useState<'Si' | 'No'>('No');
+
+  // Control de validación con Black List
+  const [curpValue, setCurpValue] = useState<string>("");
+  const [blockedRecord, setBlockedRecord] = useState<BlacklistBlockedRecord | null>(null);
+  const [isBlockedModalOpen, setIsBlockedModalOpen] = useState(false);
 
   const selectedProductCost = useMemo(() => {
     if (!selectedImei) return 0;
@@ -595,10 +604,29 @@ export default function OrdenesEntregaForm({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setStatus(null);
 
     const formData = new FormData(event.currentTarget);
+    const submittedCurp = ((formData.get("curp") as string) || curpValue).trim().toUpperCase();
+
+    // Verificación obligatoria de Black List al intentar enviar el formulario
+    if (submittedCurp) {
+      setIsSubmitting(true);
+      try {
+        const blacklistCheck = await checkCurpInBlacklist(submittedCurp);
+        if (blacklistCheck.isBlocked && blacklistCheck.record) {
+          setBlockedRecord(blacklistCheck.record);
+          setIsBlockedModalOpen(true);
+          setIsSubmitting(false);
+          return; // INTERRUPCIÓN ESTRICTA: No permite enviar la orden
+        }
+      } catch (err) {
+        console.error("Error validando Black List en submit:", err);
+      }
+      setIsSubmitting(false);
+    }
+
+    setIsSubmitting(true);
     const baseInfo = modelosUnicos.find(([key]) => key === selectedModelKey)?.[1];
     
     if (baseInfo) {
@@ -611,6 +639,9 @@ export default function OrdenesEntregaForm({
     if (result.success) {
       setStatus({ type: 'success', message: `¡Orden de Entrega ${result.folio || ''} registrada y enviada a Discord!` });
       formRef.current?.reset();
+      setCurpValue("");
+      setBlockedRecord(null);
+      setIsBlockedModalOpen(false);
       setSelectedFileName("");
       setSelectedModelKey("");
       setSelectedColor("");
@@ -639,8 +670,15 @@ export default function OrdenesEntregaForm({
         </div>
       )}
 
-      {/* 1. Datos del cliente */}
-      <FormDatosCliente />
+      {/* 1. Datos del cliente con verificación de CURP interactiva */}
+      <FormDatosCliente
+        curpValue={curpValue}
+        onCurpChange={setCurpValue}
+        onCurpBlocked={(record) => {
+          setBlockedRecord(record);
+          setIsBlockedModalOpen(true);
+        }}
+      />
 
       {/* 2. Selección de equipo y stock */}
       <FormSeleccionEquipo
@@ -707,6 +745,13 @@ export default function OrdenesEntregaForm({
           'Registrar Orden de Entrega'
         )}
       </button>
+
+      {/* Modal de Advertencia y Bloqueo por Black List */}
+      <BlacklistOrderBlockedModal
+        record={blockedRecord}
+        isOpen={isBlockedModalOpen}
+        onClose={() => setIsBlockedModalOpen(false)}
+      />
     </form>
   );
 }
