@@ -65,6 +65,23 @@ export async function submitOrdenEntrega(formData: FormData) {
 
   const verificacionFile = formData.get("verificacion_crediticia") as File | null;
 
+  // 3.3. CONTROL DE BLACK LIST: Si la CURP está registrada en la lista negra, rechazamos de inmediato la orden
+  const cleanCurp = data.curp?.trim().toUpperCase();
+  if (cleanCurp) {
+    const { data: blacklistedRecord } = await supabase
+      .from('blacklist')
+      .select('id, nombre, curp, zona, motivo, created_at')
+      .eq('curp', cleanCurp)
+      .maybeSingle();
+
+    if (blacklistedRecord) {
+      return {
+        success: false,
+        error: `El cliente con CURP ${cleanCurp} se encuentra bloqueado en la Black List. Motivo: ${blacklistedRecord.motivo}`,
+      };
+    }
+  }
+
   // 3.35. CONTROL DE DÍA DE DESCANSO Y HORARIOS DEL REPARTIDOR
   let driverRowData: { zona_horaria?: string; dias?: number[]; horario_inicio?: string; horario_fin?: string; nombre?: string } | null = null;
   if (data.repartidor_id) {
@@ -509,4 +526,56 @@ export async function submitOrdenEntrega(formData: FormData) {
     return { success: false, error: "No se pudo enviar la notificación a Discord." };
   }
 }
+
+export interface BlacklistCheckResult {
+  isBlocked: boolean;
+  record?: {
+    id: string;
+    nombre: string;
+    curp: string;
+    zona: string;
+    motivo: string;
+    created_at: string;
+  };
+  error?: string;
+}
+
+/**
+ * Consulta si un CURP específico se encuentra registrado en la Black List.
+ * Se invoca tanto desde el botón interactivo de lupa como antes de procesar el envío del formulario.
+ */
+export async function checkCurpInBlacklist(curp: string): Promise<BlacklistCheckResult> {
+  const cleanCurp = curp?.trim().toUpperCase();
+  if (!cleanCurp) {
+    return { isBlocked: false };
+  }
+
+  const supabase = await createClient();
+
+  try {
+    const { data: blacklistedRecord, error } = await supabase
+      .from('blacklist')
+      .select('id, nombre, curp, zona, motivo, created_at')
+      .eq('curp', cleanCurp)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error al consultar blacklist:', error);
+      return { isBlocked: false, error: 'Error al verificar la Black List.' };
+    }
+
+    if (blacklistedRecord) {
+      return {
+        isBlocked: true,
+        record: blacklistedRecord,
+      };
+    }
+
+    return { isBlocked: false };
+  } catch (err) {
+    console.error('Error inesperado al verificar blacklist:', err);
+    return { isBlocked: false, error: 'Error de conexión al verificar Black List.' };
+  }
+}
+
 

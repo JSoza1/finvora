@@ -1,12 +1,71 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { checkCurpInBlacklist } from '@/app/empresa/webapp/ordenes-entrega/actions';
+import type { BlacklistBlockedRecord } from './BlacklistOrderBlockedModal';
+
+interface FormDatosClienteProps {
+  curpValue?: string;
+  onCurpChange?: (value: string) => void;
+  onCurpBlocked?: (record: BlacklistBlockedRecord) => void;
+}
 
 /**
  * Componente que renderiza los campos iniciales de información del cliente y referencias personales/familiares
  * en el formulario de Orden de Entrega.
  */
-export function FormDatosCliente() {
+export function FormDatosCliente({
+  curpValue = '',
+  onCurpChange,
+  onCurpBlocked,
+}: FormDatosClienteProps) {
+  const [internalCurp, setInternalCurp] = useState(curpValue);
+  const [isChecking, setIsChecking] = useState(false);
+  const [checkStatus, setCheckStatus] = useState<'idle' | 'clean'>('idle');
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setInternalCurp(curpValue);
+  }, [curpValue]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handleCurpChange = (changeEvent: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = changeEvent.target.value.toUpperCase();
+    setInternalCurp(formatted);
+    onCurpChange?.(formatted);
+    if (checkStatus !== 'idle') {
+      setCheckStatus('idle');
+    }
+  };
+
+  const handleVerifyCurp = async () => {
+    const cleanCurp = internalCurp.trim().toUpperCase();
+    if (!cleanCurp) return;
+
+    setIsChecking(true);
+    try {
+      const result = await checkCurpInBlacklist(cleanCurp);
+      if (result.isBlocked && result.record) {
+        onCurpBlocked?.(result.record);
+      } else {
+        setCheckStatus('clean');
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          setCheckStatus('idle');
+        }, 2500);
+      }
+    } catch (err) {
+      console.error('Error al verificar CURP en Black List:', err);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   const styles = {
     formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
     inputGroup: "space-y-2",
@@ -42,16 +101,45 @@ export function FormDatosCliente() {
             </select>
           </div>
 
+          {/* Campo CURP con botón de Lupa (90% input / 10% botón) */}
           <div className={styles.inputGroup}>
             <label className={styles.label}>CURP</label>
-            <input
-              type="text"
-              name="curp"
-              className={styles.input}
-              required
-              placeholder="Ingrese los 18 caracteres de la CURP"
-              suppressHydrationWarning
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                name="curp"
+                value={internalCurp}
+                onChange={handleCurpChange}
+                className={`${styles.input} flex-1 ${internalCurp ? 'font-mono uppercase tracking-wider' : ''}`}
+                required
+                maxLength={18}
+                placeholder="Ingrese Curp"
+                suppressHydrationWarning
+              />
+              <button
+                type="button"
+                onClick={handleVerifyCurp}
+                disabled={isChecking}
+                className={`w-12 h-[50px] shrink-0 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+                  checkStatus === 'clean'
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10'
+                    : 'bg-slate-950/70 border-slate-800 text-secondary hover:text-white hover:border-secondary/50 active:scale-95'
+                }`}
+                title={checkStatus === 'clean' ? 'CURP verificado: No está en Black List' : 'Verificar CURP en Black List'}
+              >
+                {isChecking ? (
+                  <span className="w-4 h-4 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin" />
+                ) : checkStatus === 'clean' ? (
+                  <span className="material-symbols-outlined text-xl select-none animate-in zoom-in-75 duration-150">
+                    check_circle
+                  </span>
+                ) : (
+                  <span className="material-symbols-outlined text-xl select-none">
+                    search
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className={styles.inputGroup}>
